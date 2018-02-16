@@ -4,40 +4,69 @@
 #include "SMiniz.h"
 #include <vector>
 #include <unordered_set>
+#include <csignal>
+
+#define BUF_SIZE 10000
+volatile bool should_exit = false;
+
+void sighandler(int)
+{
+    std::cout << "ending process" << std::endl;
+    should_exit = true;
+}
+
 class CompDecompFile
 {
 private:
     FILE* _fileHandle = nullptr;
     std::unique_ptr<util::SMinizDecompress> _decompressor;
     std::unique_ptr<util::SMinizCompress> _compressor;
-    bool _doCompress;
 
 public:
-    CompDecompFile(const std::string& filepath, bool decompress = true):_doCompress(decompress)
+    CompDecompFile(const std::string& filepath)
 	{
 	    _fileHandle = fopen(filepath.c_str(), "rb");
 	}
 
-    void doWork(std::function<bool(const unsigned char* data, size_t length)> callback)
+    void deCompress(std::function<bool(const unsigned char* data, size_t length)> callback)
 	{
-	    if (_doCompress)
+	    char buf[BUF_SIZE];
+	    _decompressor = std::make_unique<util::SMinizDecompress>(callback);
+	    _decompressor->initialize();
+	    while(!should_exit)
 	    {
-		_decompressor = std::make_unique<util::SMinizDecompress>(callback);
+		size_t readLen = fread(buf, 1, BUF_SIZE, _fileHandle);
+		if (0 == readLen)
+		    break;
+		_decompressor->decompressData((unsigned char*)buf, readLen);
 	    }
-	    else
+	    _decompressor.reset();
+	}
+    
+    void Compress(std::function<bool(const unsigned char* data, size_t length)> callback)
+	{
+	    char buf[BUF_SIZE];
+	    _compressor = std::make_unique<util::SMinizCompress>(callback);
+	    _compressor->initialize();
+	    while(!should_exit)
 	    {
-		_compressor = std::make_unique<util::SMinizCompress>(callback);
+		size_t readLen = fread(buf, 1, BUF_SIZE, _fileHandle);
+		if (0 == readLen)
+		    break;
+		_compressor->compressData((unsigned char*)buf, readLen);
 	    }
+	    _compressor.reset();
 	}
 };
 
 void processfunc(unsigned char* buf)
 {
-
 }
 
 int main(int argc, char** argv)
 {
+    signal(SIGTERM, sighandler);
+    signal(SIGINT, sighandler);
     bool decompress;
     std::string filepath;
     int c;
@@ -60,36 +89,22 @@ int main(int argc, char** argv)
 
     if (!filepath.empty())
     {
-	CompDecompFile df(filepath, decompress);
+	CompDecompFile df(filepath);
 	std::vector<char> dataRead;
-
-	// with compressed message containing its size in the first int field
-	df.doWork([&](const unsigned char* data, size_t length)->bool {
-		// do all your work here
-		dataRead.insert(dataRead.end(), data, data + length);
-		int msgLen = 0;
-		const int intLen = sizeof(msgLen);
-		while (dataRead.size() > intLen)
-		{
-			unsigned char* ptr = (unsigned char*)dataRead.data();
-			memcpy(&msgLen, ptr, intLen);
-
-			if (msgLen > (dataRead.size() - intLen))
-			{
-				// not enough data to process ..
-				break;
-			}
-			else
-			{
-				unsigned char* msg = ptr + intLen;
-				processfunc(msg);
-				dataRead.erase(dataRead.begin(), dataRead.begin() + msgLen + intLen);
-			}
-		}
-
-		return true;
-	    });
-
+	if (decompress)
+	{
+	    df.deCompress([&](const unsigned char* data, size_t length)->bool {
+		    // handle the uncompressed data here
+		    return true;
+		});
+	}
+	else
+	{
+	    df.Compress([&](const unsigned char* data, size_t length)->bool {
+		    // handle the compressed data here
+		    return true;
+		});
+	}
     }
 }
     
