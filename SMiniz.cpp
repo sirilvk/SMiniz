@@ -1,4 +1,3 @@
-#include "common.h"
 #include "SMiniz.h"
 #include <functional>
 
@@ -37,7 +36,7 @@ namespace util
 			// can't throw in destructor .. so just log
 			std::string errMsg = "Failed to finalize the deflate because of ";
 			errMsg += ex.what();
-			util::error(errMsg.c_str());
+			std::cerr << errMsg << std::endl;
 		}
 	}
 
@@ -132,7 +131,7 @@ namespace util
 			// can't throw in destructor .. so just log
 			std::string errMsg = "Failed to finalize the deflate because of ";
 			errMsg += ex.what();
-			util::error(errMsg.c_str());
+			std::cerr << errMsg << std::endl;
 		}
 	}
 

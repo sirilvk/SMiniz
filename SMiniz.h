@@ -1,11 +1,7 @@
 #pragma once
 #include "miniz.h"
-
-#ifdef _WIN32
-#  define EXPORTIT __declspec( dllexport )
-#else
-#  define EXPORTIT 
-#endif
+#include <functional>
+#include <iostream>
 
 #define SMINIZ_BUF_SIZE (1048576)
 
@@ -13,7 +9,7 @@ typedef std::function<bool(const unsigned char* data, size_t length)> WriteFunc;
 
 namespace util
 {
-	class EXPORTIT SMiniz
+	class SMiniz
 	{
 	protected:
 #pragma warning(push)
@@ -31,7 +27,7 @@ namespace util
 		void printStat(int bufLength, size_t index, size_t length, int flush);
 	};
 
-	class EXPORTIT SMinizCompress : public SMiniz
+	class SMinizCompress : public SMiniz
 	{
 	public:
 		SMinizCompress(WriteFunc funcWrite) :SMiniz(funcWrite) {}
@@ -42,7 +38,7 @@ namespace util
 		void compressData(const unsigned char* srcData, size_t length, int flush = Z_NO_FLUSH);
 	};
 
-	class EXPORTIT SMinizDecompress : public SMiniz
+	class SMinizDecompress : public SMiniz
 	{
 	public:
 		SMinizDecompress(WriteFunc funcWrite) :SMiniz(funcWrite) {}
