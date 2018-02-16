@@ -79,10 +79,10 @@ int main(int argc, char** argv)
 		filepath = optarg;
 	    break;
 	case 'd':
-	    decompress = false;
+	    decompress = true;
 	    break;
 	case 'c':
-	    decompress = true;
+	    decompress = false;
 	    break;
 	}
     }
